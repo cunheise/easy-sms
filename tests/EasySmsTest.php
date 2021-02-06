@@ -16,6 +16,7 @@ use Overtrue\EasySms\Contracts\MessageInterface;
 use Overtrue\EasySms\Contracts\PhoneNumberInterface;
 use Overtrue\EasySms\EasySms;
 use Overtrue\EasySms\Exceptions\InvalidArgumentException;
+use Overtrue\EasySms\Gateways\AliyunGateway;
 use Overtrue\EasySms\Message;
 use Overtrue\EasySms\Messenger;
 use Overtrue\EasySms\PhoneNumber;
@@ -32,38 +33,17 @@ class EasySmsTest extends TestCase
 
         // invalid gateway
         $this->expectException(InvalidArgumentException::class);
-        $this->expectExceptionMessage('Gateway "Overtrue\EasySms\Gateways\NotExistsGatewayNameGateway" not exists.');
+        $this->expectExceptionMessage('Class "Overtrue\EasySms\Gateways\NotExistsGatewayNameGateway" is a invalid easy-sms gateway.');
 
         $easySms->gateway('NotExistsGatewayName');
     }
 
-    public function testGatewayWithoutDefaultSetting()
+    public function testGatewayNameConflicts()
     {
-        $easySms = new EasySms([]);
+        $easySms = \Mockery::mock(EasySms::class.'[makeGateway]', [['default' => DummyGatewayForTest::class]]);
 
-        $this->expectException(RuntimeException::class);
-        $this->expectExceptionMessage('No default gateway configured.');
-
-        $easySms->gateway();
-    }
-
-    public function testGatewayWithDefaultSetting()
-    {
-        $easySms = new EasySms(['default' => DummyGatewayForTest::class]);
-        $this->assertSame(DummyGatewayForTest::class, $easySms->getDefaultGateway());
-        $this->assertInstanceOf(DummyGatewayForTest::class, $easySms->gateway());
-
-        // invalid gateway
-        $easySms->setDefaultGateway(DummyInvalidGatewayForTest::class);
-        $this->expectException(InvalidArgumentException::class);
-        $this->expectExceptionMessage(
-            sprintf(
-                'Gateway "%s" not inherited from %s.',
-                DummyInvalidGatewayForTest::class,
-                GatewayInterface::class
-            )
-        );
-        $easySms->gateway();
+        $this->expectExceptionMessage('Class "Overtrue\EasySms\Tests\DummyGatewayNotImplementsGatewayInterface" is a invalid easy-sms gateway.');
+        $easySms->makeGateway(DummyGatewayNotImplementsGatewayInterface::class, []);
     }
 
     public function testExtend()
@@ -123,10 +103,21 @@ class EasySmsTest extends TestCase
             'template' => function () {
                 return 'template';
             },
+            'data' => function () {
+                return ['foo' => 'bar'];
+            },
         ]);
 
         $this->assertSame('content', $message->getContent());
         $this->assertSame('template', $message->getTemplate());
+        $this->assertSame(['foo' => 'bar'], $message->getData());
+
+        $func = function () {
+            return ['a' => 'b'];
+        };
+
+        $this->assertSame(['a' => 'b'], $message->setData($func)->getData());
+        $this->assertSame(['c' => 'd'], $message->setData(['c' => 'd'])->getData());
     }
 
     public function testGetMessenger()
@@ -179,6 +170,25 @@ class EasySmsTest extends TestCase
         $this->assertSame('g', $gateways['foo']->get('f'));
         $this->assertSame('e', $gateways['bar']->get('c'));
     }
+
+    public function testCreateGatewayWithDefaultTimeout()
+    {
+        $easySms = new EasySms([
+            'timeout' => 10.0,
+        ]);
+
+        $gateway = $easySms->gateway('aliyun');
+
+        $this->assertSame(10.0, $gateway->getTimeout());
+
+        $gateway->setTimeout(9.0);
+
+        $this->assertSame(9.0, $gateway->getTimeout());
+    }
+}
+
+class DummyGatewayNotImplementsGatewayInterface
+{
 }
 
 class DummyGatewayForTest implements GatewayInterface

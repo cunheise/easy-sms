@@ -53,6 +53,12 @@ class AliyunGateway extends Gateway
      */
     public function send(PhoneNumberInterface $to, MessageInterface $message, Config $config)
     {
+        $data = $message->getData($this);
+
+        $signName = !empty($data['sign_name']) ? $data['sign_name'] : $config->get('sign_name');
+
+        unset($data['sign_name']);
+
         $params = [
             'RegionId' => self::ENDPOINT_REGION_ID,
             'AccessKeyId' => $config->get('access_key_id'),
@@ -60,13 +66,13 @@ class AliyunGateway extends Gateway
             'SignatureMethod' => self::ENDPOINT_SIGNATURE_METHOD,
             'SignatureVersion' => self::ENDPOINT_SIGNATURE_VERSION,
             'SignatureNonce' => uniqid(),
-            'Timestamp' => $this->getTimestamp(),
+            'Timestamp' => gmdate('Y-m-d\TH:i:s\Z'),
             'Action' => self::ENDPOINT_METHOD,
             'Version' => self::ENDPOINT_VERSION,
             'PhoneNumbers' => !\is_null($to->getIDDCode()) ? strval($to->getZeroPrefixedNumber()) : $to->getNumber(),
-            'SignName' => $config->get('sign_name'),
+            'SignName' => $signName,
             'TemplateCode' => $message->getTemplate($this),
-            'TemplateParam' => json_encode($message->getData($this), JSON_FORCE_OBJECT),
+            'TemplateParam' => json_encode($data, JSON_FORCE_OBJECT),
         ];
 
         $params['Signature'] = $this->generateSign($params);
@@ -94,18 +100,5 @@ class AliyunGateway extends Gateway
         $stringToSign = 'GET&%2F&'.urlencode(http_build_query($params, null, '&', PHP_QUERY_RFC3986));
 
         return base64_encode(hash_hmac('sha1', $stringToSign, $accessKeySecret.'&', true));
-    }
-
-    /**
-     * @return false|string
-     */
-    protected function getTimestamp()
-    {
-        $timezone = date_default_timezone_get();
-        date_default_timezone_set('GMT');
-        $timestamp = date('Y-m-d\TH:i:s\Z');
-        date_default_timezone_set($timezone);
-
-        return $timestamp;
     }
 }

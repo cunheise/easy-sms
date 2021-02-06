@@ -96,11 +96,11 @@ class Message implements MessageInterface
     }
 
     /**
-     * @param string $type
+     * @param $type
      *
      * @return $this
      */
-    public function setType(string $type)
+    public function setType($type)
     {
         $this->type = $type;
 
@@ -138,15 +138,15 @@ class Message implements MessageInterface
      */
     public function getData(GatewayInterface $gateway = null)
     {
-        return $this->data;
+        return is_callable($this->data) ? call_user_func($this->data, $gateway) : $this->data;
     }
 
     /**
-     * @param array $data
+     * @param array|callable $data
      *
      * @return $this
      */
-    public function setData(array $data)
+    public function setData($data)
     {
         $this->data = $data;
 

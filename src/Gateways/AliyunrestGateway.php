@@ -59,7 +59,7 @@ class AliyunrestGateway extends Gateway
             'extend' => '',
             'sms_type' => 'normal',
             'sms_free_sign_name' => $config->get('sign_name'),
-            'sms_param' => json_encode($message->getData()),
+            'sms_param' => json_encode($message->getData($this)),
             'rec_num' => !\is_null($to->getIDDCode()) ? strval($to->getZeroPrefixedNumber()) : $to->getNumber(),
             'sms_template_code' => $message->getTemplate($this),
         ];
@@ -67,7 +67,7 @@ class AliyunrestGateway extends Gateway
 
         $result = $this->post($this->getEndpointUrl($urlParams), $params);
 
-        if (isset($result['error_response']) && $result['error_response']['code'] != 0) {
+        if (isset($result['error_response']) && 0 != $result['error_response']['code']) {
             throw new GatewayErrorException($result['error_response']['msg'], $result['error_response']['code'], $result);
         }
 

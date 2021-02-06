@@ -18,21 +18,23 @@ use Overtrue\EasySms\Support\Config;
 use Overtrue\EasySms\Traits\HasHttpRequest;
 
 /**
- * Class HuyiGateway.
+ * Class Ue35Gateway.
  *
- * @see http://www.ihuyi.com/api/sms.html
+ * @see https://shimo.im/docs/380b42d8cba24521
  */
-class HuyiGateway extends Gateway
+class Ue35Gateway extends Gateway
 {
     use HasHttpRequest;
 
-    const ENDPOINT_URL = 'http://106.ihuyi.com/webservice/sms.php?method=Submit';
+    const ENDPOINT_HOST = 'sms.ue35.cn';
 
-    const ENDPOINT_FORMAT = 'json';
+    const ENDPOINT_URI = '/sms/interface/sendmess.htm';
 
-    const SUCCESS_CODE = 2;
+    const SUCCESS_CODE = 1;
 
     /**
+     * Send message.
+     *
      * @param \Overtrue\EasySms\Contracts\PhoneNumberInterface $to
      * @param \Overtrue\EasySms\Contracts\MessageInterface     $message
      * @param \Overtrue\EasySms\Support\Config                 $config
@@ -44,34 +46,32 @@ class HuyiGateway extends Gateway
     public function send(PhoneNumberInterface $to, MessageInterface $message, Config $config)
     {
         $params = [
-            'account' => $config->get('api_id'),
-            'mobile' => $to->getIDDCode() ? \sprintf('%s %s', $to->getIDDCode(), $to->getNumber()) : $to->getNumber(),
+            'username' => $config->get('username'),
+            'userpwd' => $config->get('userpwd'),
+            'mobiles' => $to->getNumber(),
             'content' => $message->getContent($this),
-            'time' => time(),
-            'format' => self::ENDPOINT_FORMAT,
-            'sign' => $config->get('signature'),
         ];
 
-        $params['password'] = $this->generateSign($params);
+        $headers = [
+            'host' => static::ENDPOINT_HOST,
+            'content-type' => 'application/json',
+            'user-agent' => 'PHP EasySms Client',
+        ];
 
-        $result = $this->post(self::ENDPOINT_URL, $params);
+        $result = $this->request('get', self::getEndpointUri().'?'.http_build_query($params), ['headers' => $headers]);
+        if (is_string($result)) {
+            $result = json_decode(json_encode(simplexml_load_string($result)), true);
+        }
 
-        if (self::SUCCESS_CODE != $result['code']) {
-            throw new GatewayErrorException($result['msg'], $result['code'], $result);
+        if (self::SUCCESS_CODE != $result['errorcode']) {
+            throw new GatewayErrorException($result['message'], $result['errorcode'], $result);
         }
 
         return $result;
     }
 
-    /**
-     * Generate Sign.
-     *
-     * @param array $params
-     *
-     * @return string
-     */
-    protected function generateSign($params)
+    public static function getEndpointUri()
     {
-        return md5($params['account'].$this->config->get('api_key').$params['mobile'].$params['content'].$params['time']);
+        return 'http://'.static::ENDPOINT_HOST.static::ENDPOINT_URI;
     }
 }

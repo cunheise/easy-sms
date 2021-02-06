@@ -40,6 +40,16 @@
 - [天毅无线](http://www.85hu.com/)
 - [腾讯云 SMS](https://cloud.tencent.com/product/sms)
 - [阿凡达数据](http://www.avatardata.cn/)
+- [华为云](https://www.huaweicloud.com/product/msgsms.html)
+- [网易云信](https://yunxin.163.com/sms)
+- [云之讯](https://www.ucpaas.com/index.html)
+- [凯信通](http://www.kingtto.cn/)
+- [七牛云](https://www.qiniu.com/)
+- [UE35.net](http://uesms.ue35.cn/)
+- [Ucloud](https://www.ucloud.cn)
+- [短信宝](http://www.smsbao.com/)
+- [Tiniyo](https://tiniyo.com/)
+- [摩杜云](https://www.moduyun.com/)
 
 ## 环境需求
 
@@ -50,6 +60,12 @@
 ```shell
 $ composer require "overtrue/easy-sms"
 ```
+
+**For Laravel notification**
+
+如果你喜欢使用 [Laravel Notification](https://laravel.com/docs/5.8/notifications), 可以考虑直接使用朋友封装的拓展包：
+
+https://github.com/yl/easysms-notification-channel
 
 ## 使用
 
@@ -201,7 +217,7 @@ $easySms->send(13188888888, [
 $e->getResults();               // 返回所有 API 的结果，结构同上
 $e->getExceptions();            // 返回所有调用异常列表
 $e->getException($gateway);     // 返回指定网关名称的异常对象
-$e->getLastException();         // 获取最后一个失败的异常对象 
+$e->getLastException();         // 获取最后一个失败的异常对象
 ```
 
 ## 自定义网关
@@ -282,7 +298,7 @@ class OrderPaidMessage extends Message
     // 定义直接使用内容发送平台的内容
     public function getContent(GatewayInterface $gateway = null)
     {
-        return sprintf('您的订单:%s, 已经完成付款', $this->order->no);    
+        return sprintf('您的订单:%s, 已经完成付款', $this->order->no);
     }
 
     // 定义使用模板发送方式平台所需要的模板 ID
@@ -295,8 +311,8 @@ class OrderPaidMessage extends Message
     public function getData(GatewayInterface $gateway = null)
     {
         return [
-            'order_no' => $this->order->no    
-        ];    
+            'order_no' => $this->order->no
+        ];
     }
 }
 ```
@@ -345,6 +361,7 @@ $easySms->send(13188888888, $message);
 ```php
     'yunpian' => [
         'api_key' => '',
+        'signature' => '【默认签名】', // 内容中无签名时使用
     ],
 ```
 
@@ -391,6 +408,7 @@ $easySms->send(13188888888, $message);
     'huyi' => [
         'api_id' => '',
         'api_key' => '',
+        'signature' => '',
     ],
 ```
 
@@ -451,13 +469,17 @@ $easySms->send(13188888888, $message);
         'account' => '',
         'password' => '',
 
+        // 国际短信时必填
+        'intel_account' => '',
+        'intel_password' => '',
+
         // \Overtrue\EasySms\Gateways\ChuanglanGateway::CHANNEL_VALIDATE_CODE  => 验证码通道（默认）
         // \Overtrue\EasySms\Gateways\ChuanglanGateway::CHANNEL_PROMOTION_CODE => 会员营销通道
-        'channel'  => \Overtrue\EasySms\Gateways\ChuanglanGateway::CHANNEL_VALIDATE_CODE, 
+        'channel'  => \Overtrue\EasySms\Gateways\ChuanglanGateway::CHANNEL_VALIDATE_CODE,
 
         // 会员营销通道 特定参数。创蓝规定：api提交营销短信的时候，需要自己加短信的签名及退订信息
         'sign' => '【通讯云】',
-        'unsubscribe' => '回TD退订', 
+        'unsubscribe' => '回TD退订',
     ],
 ```
 
@@ -486,7 +508,7 @@ $easySms->send(13188888888, $message);
 
 ### [twilio](https://www.twilio.com)
 
-短信使用 `content`  
+短信使用 `content`
 发送对象需要 使用`+`添加区号
 
 ```php
@@ -497,9 +519,23 @@ $easySms->send(13188888888, $message);
     ],
 ```
 
+### [tiniyo](https://www.tiniyo.com)
+
+短信使用 `content`
+发送对象需要 使用`+`添加区号
+
+```php
+    'tiniyo' => [
+        'account_sid' => '', // auth_id from https://tiniyo.com
+        'from' => '', // 发送的号码 可以在控制台购买
+        'token' => '', // auth_secret from https://tiniyo.com
+    ],	    
+```
+
+
 ### [腾讯云 SMS](https://cloud.tencent.com/product/sms)
 
-短信内容使用 `content`。
+短信内容使用 `content`
 
 ```php
     'qcloud' => [
@@ -507,6 +543,18 @@ $easySms->send(13188888888, $message);
         'app_key' => '', // APP KEY
         'sign_name' => '', // 短信签名，如果使用默认签名，该字段可缺省（对应官方文档中的sign）
     ],
+```
+
+发送示例：
+
+```php
+$easySms->send(18888888888, [
+    'template' => 101234, // 模板ID
+    'content' => "您的动态验证码为：{1}，请于5分钟内完成验证，如非本人操作，请忽略本短信！", // 模板内容
+    'data' => [ 
+        $code, // 模板变量
+    ],
+]);
 ```
 
 ### [阿凡达数据](http://www.avatardata.cn/)
@@ -518,6 +566,202 @@ $easySms->send(13188888888, $message);
         'app_key' => '', // APP KEY
     ],
 ```
+
+### [华为云 SMS](https://www.huaweicloud.com/product/msgsms.html)
+
+短信内容使用 `template` + `data`
+
+```php
+    'huawei' => [
+        'endpoint' => '', // APP接入地址
+        'app_key' => '', // APP KEY
+        'app_secret' => '', // APP SECRET
+        'from' => [
+            'default' => '1069012345', // 默认使用签名通道号
+            'custom' => 'csms12345', // 其他签名通道号 可以在 data 中定义 from 来指定
+            'abc' => 'csms67890', // 其他签名通道号
+            ...
+        ],
+        'callback' => '' // 短信状态回调地址
+    ],
+```
+
+使用默认签名通道 `default`
+
+```php
+$easySms->send(13188888888, [
+    'template' => 'SMS_001',
+    'data' => [
+        6379
+    ],
+]);
+```
+
+使用指定签名通道
+
+```php
+$easySms->send(13188888888, [
+    'template' => 'SMS_001',
+    'data' => [
+        6379,
+        'from' => 'custom' // 对应 config 中的 from 数组中 custom
+    ],
+]);
+```
+
+### [网易云信](https://yunxin.163.com/sms)
+
+短信内容使用 `template` + `data`
+
+```php
+    'yunxin' => [
+        'app_key' => '',
+        'app_secret' => '',
+        'code_length' => 4, // 随机验证码长度，范围 4～10，默认为 4
+        'need_up' => false, // 是否需要支持短信上行
+    ],
+```
+
+```php
+$easySms->send(18888888888, [
+    'template' => 'SMS_001',    // 不填则使用默认模板
+    'data' => [
+        'code' => 8946, // 如果设置了该参数，则 code_length 参数无效
+        'action' => 'sendCode', // 默认为 `sendCode`，校验短信验证码使用 `verifyCode`
+    ],
+]);
+```
+
+### [云之讯](https://www.ucpaas.com/index.html)
+
+短信内容使用 `template` + `data`
+
+```php
+    'yunzhixun' => [
+        'sid' => '',
+        'token' => '',
+        'app_id' => '',
+    ],
+```
+
+```php
+$easySms->send(18888888888, [
+    'template' => 'SMS_001',
+    'data' => [
+        'params' => '8946,3',   // 模板参数，多个参数使用 `,` 分割，模板无参数时可为空
+        'uid' => 'hexianghui',  // 用户 ID，随状态报告返回，可为空
+        'mobiles' => '18888888888,188888888889',    // 批量发送短信，手机号使用 `,` 分割，不使用批量发送请不要设置该参数
+    ],
+]);
+```
+
+### [凯信通](http://www.kingtto.cn/)
+
+短信内容使用 `content`
+
+```php
+    'kingtto'  => [
+        'userid'   => '',
+        'account'  => '',
+        'password' => '',
+    ],
+```
+
+```php
+$easySms->send(18888888888, [
+    'content'  => '您的验证码为: 6379',
+]);
+```
+
+### [七牛云](https://www.qiniu.com/)
+
+短信内容使用 `template` + `data`
+
+```php
+    'qiniu' => [
+        'secret_key' => '',
+        'access_key' => '',
+    ],
+```
+
+```php
+$easySms->send(18888888888, [
+    'template' => '1231234123412341234',
+    'data' => [
+        'code' => 1234,
+    ],
+]);
+```
+### [Ucloud](https://www.ucloud.cn/)
+短信使用 `template` + `data`
+
+```php
+  'ucloud' => [
+        'private_key'  => '',    //私钥
+        'public_key'   => '',    //公钥
+        ’sig_content‘  => '',    // 短信签名,
+        'project_id'   => '',    //项目ID,子账号才需要该参数
+    ],
+```
+
+```php
+$easySms->send(18888888888, [
+    'template' => 'UTAXXXXX',       //短信模板
+    'data' => [
+        'code' => 1234,     //模板参数，模板没有参数不用则填写，有多个参数请用数组，[1111,1111]
+        'mobiles' =>'',     //同时发送多个手机短信，请用数组[xxx,xxx]
+    ],
+]);
+
+```
+
+
+### [短信宝](http://www.smsbao.com/)
+短信使用 `template`
+
+```php
+  'smsbao' => [
+        'user'  => '',    //账号
+        'password'   => ''   //密码
+    ],
+```
+
+```php
+$easySms->send(18888888888, [
+    'template' => '您的验证码为: 6379',       //短信模板
+]);
+
+```
+
+### [摩杜云](https://www.moduyun.com/)
+短信使用 `template` + `data`
+
+```php
+  'moduyun' => [
+        'accesskey' => '',  //必填 ACCESS KEY
+        'secretkey' => '',  //必填 SECRET KEY
+        'signId'    => '',  //选填 短信签名，如果使用默认签名，该字段可缺省
+        'type'      => 0,   //选填 0:普通短信;1:营销短信
+    ],
+```
+
+```php
+$easySms->send(18888888888, [
+    'template' => '5a95****b953',   //短信模板
+    'data' => [
+        1234,   //模板参数，对应模板的{1}
+        30      //模板参数，对应模板的{2}
+        //...
+    ],
+]);
+
+```
+
+## PHP 扩展包开发
+
+> 想知道如何从零开始构建 PHP 扩展包？
+>
+> 请关注我的实战课程，我会在此课程中分享一些扩展开发经验 —— [《PHP 扩展包实战教程 - 从入门到发布》](https://learnku.com/courses/creating-package)
 
 ## License
 
